@@ -1,5 +1,10 @@
 import "./style.css";
 import accounts from "./accounts.js";
+
+//Variable global para almacenar la cuenta actual
+let currentAccount;
+let balance;
+
 document.querySelector("#app").innerHTML = `
     <nav>
       <p class="welcome">Log in to get started</p>
@@ -131,6 +136,7 @@ const createUsernames = function (accounts) {
   });
 };
 createUsernames(accounts);
+
 btnLogin.addEventListener("click", function (e) {
   // evitar que el formulario se envíe
   e.preventDefault();
@@ -146,6 +152,8 @@ btnLogin.addEventListener("click", function (e) {
     // MÁS CONCISO:  if (account?.pin === inputPin) {
     // si el usuario y el pin son correctos
     // mensaje de bienvenida y que se vea la aplicación
+    currentAccount = account; //guardamos la cuenta actual
+
     containerApp.style.opacity = 1;
     labelWelcome.textContent = `Welcome back, ${account.owner.split(" ")[0]}`;
     // limpiar formulario
@@ -153,18 +161,17 @@ btnLogin.addEventListener("click", function (e) {
     // cargar los datos (movimientos de la cuenta)
     updateUI(account);
   } else {
-    console.log("login incorrecto");
+    //console.log("login incorrecto");
+    labelWelcome.textContent = `Datos incorrectos`;
   }
 });
-const updateUI = function ({ movements }) {
-  // const {movements} = account.movements
+const updateUI = function (account) {
   // mostrar los movimientos de la cuenta
-  displayMovements(movements);
+  displayMovements(account.movements);
   // mostrar el balance de la cuenta
-  displayBalance(movements);
+  displayBalance(account.movements);
   // mostrar el total de los movimientos de la cuenta
-  // ingresos y gastos
-  displaySummary(movements);
+  displaySummary(account.movements);
 };
 const displayMovements = function (movements) {
   // vaciamos el HTML
@@ -187,10 +194,11 @@ const displayMovements = function (movements) {
     containerMovements.insertAdjacentHTML("afterbegin", html);
   });
 };
+// Función para mostrar el balance de la cuenta
 const displayBalance = function (movements) {
-  // calculamos suma de ingresos y retiradas de efectivo
-  const balance = movements.reduce((total, movement) => total + movement, 0);
-  // actualizamos el DOM:
+  // Calculamos la suma de ingresos y retiradas de efectivo
+  balance = movements.reduce((total, movement) => total + movement, 0);
+  // Actualizamos el DOM
   labelBalance.textContent = `${balance.toFixed(2)} €`;
 };
 const displaySummary = function (movements) {
@@ -203,3 +211,31 @@ const displaySummary = function (movements) {
     .reduce((total, movement) => total + movement, 0);
   labelSumOut.textContent = `${sumOut.toFixed(2)} €`;
 };
+
+btnTransfer.addEventListener("click", function (e) {
+  e.preventDefault();
+  console.log("transferir");
+});
+
+// Ahora implementamos correctamente el préstamo
+btnLoan.addEventListener("click", function (e) {
+  e.preventDefault();
+  const amount = Number(inputLoanAmount.value);
+
+  // Verificamos si el monto del préstamo es al menos el 10% del balance total
+  if (amount > 0 && amount >= balance * 0.1) {
+    // Añadimos el préstamo a los movimientos
+    currentAccount.movements.push(amount);
+    // Actualizamos la UI
+    updateUI(currentAccount);
+    // Limpiamos el campo de input
+    inputLoanAmount.value = "";
+  } else {
+    alert("El préstamo debe ser al menos el 10% de tu balance total.");
+  }
+});
+
+btnClose.addEventListener("click", function (e) {
+  e.preventDefault();
+  console.log("close");
+});
