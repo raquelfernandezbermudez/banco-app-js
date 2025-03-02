@@ -212,17 +212,13 @@ const displaySummary = function (movements) {
   labelSumOut.textContent = `${sumOut.toFixed(2)} €`;
 };
 
-btnTransfer.addEventListener("click", function (e) {
-  e.preventDefault();
-  console.log("transferir");
-});
-
 // Ahora implementamos correctamente el préstamo
 btnLoan.addEventListener("click", function (e) {
   e.preventDefault();
-  const amount = Number(inputLoanAmount.value);
+  const amountValue = inputLoanAmount.value;
+  const amount = Number(amountValue);
 
-  // Verificamos si el monto del préstamo es al menos el 10% del balance total
+  // Comprobamos si la cantidad del préstamo es como mínimo del 10% del balance total
   if (amount > 0 && amount >= balance * 0.1) {
     // Añadimos el préstamo a los movimientos
     currentAccount.movements.push(amount);
@@ -237,5 +233,31 @@ btnLoan.addEventListener("click", function (e) {
 
 btnClose.addEventListener("click", function (e) {
   e.preventDefault();
-  console.log("close");
+  
+  //Obtener los datos ingresados por el usuario
+  const inputUsername = inputCloseUsername.value;
+  const inputPin = Number(inputClosePin.value);
+  
+  //Verificar si las credenciales son correctas (usuario actual)
+  if (inputUsername === currentAccount.username && inputPin === currentAccount.pin) {
+    // Encontrar el índice de la cuenta en el array de cuentas
+    const accountIndex = accounts.findIndex(
+      account => account.username === currentAccount.username
+    );
+    
+    //Eliminar la cuenta del array
+    accounts.splice(accountIndex, 1);
+    
+    //Ocultar la UI (cerrar sesión)
+    containerApp.style.opacity = 0;
+    
+    //Actualizar mensaje de bienvenida
+    labelWelcome.textContent = 'Log in to get started';
+    
+    //Limpiar los campos de input
+    inputCloseUsername.value = inputClosePin.value = '';
+  } else {
+    // Si las credenciales son incorrectas
+    alert('Credenciales incorrectas. No se puede cerrar la cuenta.');
+  }
 });
