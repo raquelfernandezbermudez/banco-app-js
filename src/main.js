@@ -233,31 +233,89 @@ btnLoan.addEventListener("click", function (e) {
 
 btnClose.addEventListener("click", function (e) {
   e.preventDefault();
-  
+
   //Obtener los datos ingresados por el usuario
   const inputUsername = inputCloseUsername.value;
   const inputPin = Number(inputClosePin.value);
-  
+
   //Verificar si las credenciales son correctas (usuario actual)
-  if (inputUsername === currentAccount.username && inputPin === currentAccount.pin) {
+  if (
+    inputUsername === currentAccount.username &&
+    inputPin === currentAccount.pin
+  ) {
     // Encontrar el índice de la cuenta en el array de cuentas
     const accountIndex = accounts.findIndex(
-      account => account.username === currentAccount.username
+      (account) => account.username === currentAccount.username
     );
-    
+
     //Eliminar la cuenta del array
     accounts.splice(accountIndex, 1);
-    
+
     //Ocultar la UI (cerrar sesión)
     containerApp.style.opacity = 0;
-    
+
     //Actualizar mensaje de bienvenida
-    labelWelcome.textContent = 'Log in to get started';
-    
+    labelWelcome.textContent = "Log in to get started";
+
     //Limpiar los campos de input
-    inputCloseUsername.value = inputClosePin.value = '';
+    inputCloseUsername.value = inputClosePin.value = "";
   } else {
     // Si las credenciales son incorrectas
-    alert('Credenciales incorrectas. No se puede cerrar la cuenta.');
+    alert("Credenciales incorrectas. No se puede cerrar la cuenta.");
+  }
+});
+
+btnTransfer.addEventListener("click", function (e) {
+  e.preventDefault();
+
+  // Obtener los datos de la transferencia
+  const amount = Number(inputTransferAmount.value);
+  const receiverUsername = inputTransferTo.value;
+
+  // Buscar la cuenta destinataria
+  const receiverAccount = accounts.find(
+    (account) => account.username === receiverUsername
+  );
+
+  // Limpiar los campos de entrada
+  inputTransferAmount.value = inputTransferTo.value = "";
+
+  // Validaciones:
+  // 1. La cantidad debe ser positiva
+  // 2. La cuenta actual debe tener suficiente saldo
+  // 3. La cuenta destinataria debe existir
+  // 4. No se puede transferir a la misma cuenta
+  if (
+    amount > 0 &&
+    currentAccount.movements.reduce((acc, mov) => acc + mov, 0) >= amount &&
+    receiverAccount &&
+    receiverAccount.username !== currentAccount.username
+  ) {
+    // Realizar la transferencia
+    currentAccount.movements.push(-amount); // Restar de la cuenta origen
+    receiverAccount.movements.push(amount); // Añadir a la cuenta destino
+
+    // Actualizar la interfaz
+    updateUI(currentAccount);
+
+    // Mostrar mensaje de éxito
+    alert(
+      `Transferencia de ${amount.toFixed(2)}€ a ${
+        receiverAccount.owner
+      } realizada con éxito.`
+    );
+  } else {
+    // Mostrar mensaje de error apropiado
+    if (amount <= 0) {
+      alert("La cantidad debe ser positiva.");
+    } else if (
+      currentAccount.movements.reduce((acc, mov) => acc + mov, 0) < amount
+    ) {
+      alert("No tienes suficiente saldo para realizar esta transferencia.");
+    } else if (!receiverAccount) {
+      alert("La cuenta destinataria no existe.");
+    } else if (receiverAccount.username === currentAccount.username) {
+      alert("No puedes transferir dinero a tu propia cuenta.");
+    }
   }
 });
