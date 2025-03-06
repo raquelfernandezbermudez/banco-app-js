@@ -212,23 +212,32 @@ const displaySummary = function (movements) {
   labelSumOut.textContent = `${sumOut.toFixed(2)} €`;
 };
 
-// Ahora implementamos correctamente el préstamo
 btnLoan.addEventListener("click", function (e) {
   e.preventDefault();
   const amountValue = inputLoanAmount.value;
   const amount = Number(amountValue);
 
-  // Comprobamos si la cantidad del préstamo es como mínimo del 10% del balance total
-  if (amount > 0 && amount >= balance * 0.1) {
-    // Añadimos el préstamo a los movimientos
-    currentAccount.movements.push(amount);
-    // Actualizamos la UI
-    updateUI(currentAccount);
-    // Limpiamos el campo de input
-    inputLoanAmount.value = "";
-  } else {
-    alert("El préstamo debe ser al menos el 10% de tu balance total.");
+  // Validamos que la cantidad sea positiva
+  if (amount <= 0) {
+    alert("La cantidad del préstamo debe ser positiva.");
+    return; // Salimos de la función
   }
+
+  // Validamos que no supere el 200% del balance
+  if (amount > balance * 2) {
+    alert("El préstamo no puede superar el 200% de tu saldo actual.");
+    return; // Salimos de la función
+  }
+
+  // Si pasa ambas validaciones, procesamos el préstamo
+  currentAccount.movements.push(amount);
+  // Actualizamos la UI
+  updateUI(currentAccount);
+  // Limpiamos el campo de input
+  inputLoanAmount.value = "";
+
+  // Opcional: mensaje de éxito
+  alert(`Préstamo de ${amount.toFixed(2)}€ concedido correctamente.`);
 });
 
 btnClose.addEventListener("click", function (e) {
