@@ -4,6 +4,8 @@ import accounts from "./accounts.js";
 //Variable global para almacenar la cuenta actual
 let currentAccount;
 let balance;
+// CAMBIO: Variable para controlar el estado de ordenación
+let sorted = false;
 
 document.querySelector("#app").innerHTML = `
     <nav>
@@ -137,6 +139,67 @@ const createUsernames = function (accounts) {
 };
 createUsernames(accounts);
 
+// CAMBIO: Función displayMovements actualizada para trabajar con objetos
+const displayMovements = function (movements, sort = false) {
+  // Vaciamos el HTML
+  containerMovements.innerHTML = "";
+  
+  // CAMBIO: Implementación de ordenación por fecha
+  const movs = sort 
+    ? [...movements].sort((a, b) => new Date(a.date) - new Date(b.date)) 
+    : movements;
+  
+  // Recorremos el array de movimientos
+  movs.forEach((mov, i) => {
+    // CAMBIO: Accedemos a mov.amount en lugar de mov directamente
+    const type = mov.amount > 0 ? "deposit" : "withdrawal";
+    
+    // CAMBIO: Formateo de la fecha del objeto
+    const date = new Date(mov.date);
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const year = date.getFullYear();
+    const displayDate = `${day}/${month}/${year}`;
+    
+    // Creamos el HTML
+    const html = `
+      <div class="movements__row">
+        <div class="movements__type movements__type--${type}">${i + 1} ${
+      type === "withdrawal" ? "withdrawal" : "deposit"
+    }</div>
+        <div class="movements__date">${displayDate}</div>
+        <div class="movements__value">${mov.amount.toFixed(2)}€</div>
+      </div>
+    `;
+    // Insertamos el HTML en el DOM
+    containerMovements.insertAdjacentHTML("afterbegin", html);
+  });
+};
+
+// CAMBIO: Función displayBalance actualizada para trabajar con objetos
+const displayBalance = function (movements) {
+  // Calculamos la suma de ingresos y retiradas de efectivo
+  // CAMBIO: Accedemos a movement.amount
+  balance = movements.reduce((total, movement) => total + movement.amount, 0);
+  // Actualizamos el DOM
+  labelBalance.textContent = `${balance.toFixed(2)} €`;
+};
+
+// CAMBIO: Función displaySummary actualizada para trabajar con objetos
+const displaySummary = function (movements) {
+  // CAMBIO: Filtramos y sumamos la propiedad amount
+  const sumIn = movements
+    .filter((movement) => movement.amount > 0)
+    .reduce((total, movement) => total + movement.amount, 0);
+  labelSumIn.textContent = `${sumIn.toFixed(2)} €`;
+  
+  // CAMBIO: Filtramos y sumamos la propiedad amount
+  const sumOut = movements
+    .filter((movement) => movement.amount < 0)
+    .reduce((total, movement) => total + movement.amount, 0);
+  labelSumOut.textContent = `${Math.abs(sumOut).toFixed(2)} €`;
+};
+
 btnLogin.addEventListener("click", function (e) {
   // evitar que el formulario se envíe
   e.preventDefault();
@@ -165,6 +228,7 @@ btnLogin.addEventListener("click", function (e) {
     labelWelcome.textContent = `Datos incorrectos`;
   }
 });
+
 const updateUI = function (account) {
   // mostrar los movimientos de la cuenta
   displayMovements(account.movements);
@@ -173,45 +237,8 @@ const updateUI = function (account) {
   // mostrar el total de los movimientos de la cuenta
   displaySummary(account.movements);
 };
-const displayMovements = function (movements) {
-  // vaciamos el HTML
-  containerMovements.innerHTML = "";
-  // recorremos el array de movimientos
-  movements.forEach((mov, i) => {
-    // creamos el html para cada movimiento y lo guardamos en una variable
-    const type = mov > 0 ? "deposit" : "withdrawal";
-    // creamos el HTML
-    const html = `
-      <div class="movements__row">
-        <div class="movements__type movements__type--${type}">${i + 1} ${
-      type === "withdrawal" ? "withdrawal" : "deposit"
-    }</div>
-        <div class="movements__date">3 days ago</div>
-        <div class="movements__value">${mov.toFixed(2)}€</div>
-      </div>
-    `;
-    // insertamos el HTML en el DOM
-    containerMovements.insertAdjacentHTML("afterbegin", html);
-  });
-};
-// Función para mostrar el balance de la cuenta
-const displayBalance = function (movements) {
-  // Calculamos la suma de ingresos y retiradas de efectivo
-  balance = movements.reduce((total, movement) => total + movement, 0);
-  // Actualizamos el DOM
-  labelBalance.textContent = `${balance.toFixed(2)} €`;
-};
-const displaySummary = function (movements) {
-  const sumIn = movements
-    .filter((movement) => movement > 0)
-    .reduce((total, movement) => total + movement, 0);
-  labelSumIn.textContent = `${sumIn.toFixed(2)} €`;
-  const sumOut = movements
-    .filter((movement) => movement < 0)
-    .reduce((total, movement) => total + movement, 0);
-  labelSumOut.textContent = `${sumOut.toFixed(2)} €`;
-};
 
+// CAMBIO: Función btnLoan actualizada para trabajar con objetos
 btnLoan.addEventListener("click", function (e) {
   e.preventDefault();
   const amountValue = inputLoanAmount.value;
@@ -230,7 +257,12 @@ btnLoan.addEventListener("click", function (e) {
   }
 
   // Si pasa ambas validaciones, procesamos el préstamo
-  currentAccount.movements.push(amount);
+  // CAMBIO: Creamos un objeto con amount y date en lugar de solo añadir un número
+  currentAccount.movements.push({
+    amount: amount,
+    date: new Date()
+  });
+  
   // Actualizamos la UI
   updateUI(currentAccount);
   // Limpiamos el campo de input
@@ -274,6 +306,7 @@ btnClose.addEventListener("click", function (e) {
   }
 });
 
+// CAMBIO: Función btnTransfer actualizada para trabajar con objetos
 btnTransfer.addEventListener("click", function (e) {
   e.preventDefault();
 
@@ -289,20 +322,28 @@ btnTransfer.addEventListener("click", function (e) {
   // Limpiar los campos de entrada
   inputTransferAmount.value = inputTransferTo.value = "";
 
+  // CAMBIO: Calcular el balance actual usando amount
+  const currentBalance = currentAccount.movements.reduce(
+    (acc, mov) => acc + mov.amount, 0
+  );
+
   // Validaciones:
-  // 1. La cantidad debe ser positiva
-  // 2. La cuenta actual debe tener suficiente saldo
-  // 3. La cuenta destinataria debe existir
-  // 4. No se puede transferir a la misma cuenta
   if (
     amount > 0 &&
-    currentAccount.movements.reduce((acc, mov) => acc + mov, 0) >= amount &&
+    currentBalance >= amount &&
     receiverAccount &&
     receiverAccount.username !== currentAccount.username
   ) {
-    // Realizar la transferencia
-    currentAccount.movements.push(-amount); // Restar de la cuenta origen
-    receiverAccount.movements.push(amount); // Añadir a la cuenta destino
+    // CAMBIO: Realizar la transferencia con objetos en lugar de valores simples
+    currentAccount.movements.push({
+      amount: -amount,
+      date: new Date()
+    });
+    
+    receiverAccount.movements.push({
+      amount: amount,
+      date: new Date()
+    });
 
     // Actualizar la interfaz
     updateUI(currentAccount);
@@ -317,9 +358,7 @@ btnTransfer.addEventListener("click", function (e) {
     // Mostrar mensaje de error apropiado
     if (amount <= 0) {
       alert("La cantidad debe ser positiva.");
-    } else if (
-      currentAccount.movements.reduce((acc, mov) => acc + mov, 0) < amount
-    ) {
+    } else if (currentBalance < amount) {
       alert("No tienes suficiente saldo para realizar esta transferencia.");
     } else if (!receiverAccount) {
       alert("La cuenta destinataria no existe.");
@@ -327,4 +366,11 @@ btnTransfer.addEventListener("click", function (e) {
       alert("No puedes transferir dinero a tu propia cuenta.");
     }
   }
+});
+
+// CAMBIO: Implementación de la funcionalidad de ordenación
+btnSort.addEventListener('click', function(e) {
+  e.preventDefault();
+  displayMovements(currentAccount.movements, !sorted);
+  sorted = !sorted;
 });
