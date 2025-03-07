@@ -1,10 +1,13 @@
 import "./style.css";
 import accounts from "./accounts.js";
 
+import { formatDistanceToNow, format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
 //Variable global para almacenar la cuenta actual
 let currentAccount;
 let balance;
-// CAMBIO: Variable para controlar el estado de ordenación
+// Variable para controlar el estado de ordenación
 let sorted = false;
 
 document.querySelector("#app").innerHTML = `
@@ -126,6 +129,26 @@ const inputTransferAmount = document.querySelector(".form__input--amount");
 const inputLoanAmount = document.querySelector(".form__input--loan-amount");
 const inputCloseUsername = document.querySelector(".form__input--user");
 const inputClosePin = document.querySelector(".form__input--pin");
+
+// Función para formatear fechas
+const formatDate = function(date) {
+  // Para fechas recientes, mostrar tiempo relativo (hace X días) si es de menos de 30 días
+  const daysPassed = Math.round(Math.abs((new Date() - date) / (1000 * 60 * 60 * 24)));
+  
+  if (daysPassed < 30) {
+    return formatDistanceToNow(date, { addSuffix: true, locale: es });
+  } else {
+    // Para fechas más antiguas, mostrar la fecha formateada
+    return format(date, 'dd/MM/yyyy', { locale: es });
+  }
+};
+
+// Actualizar la fecha actual en el balance
+const updateCurrentDate = function() {
+  const now = new Date();
+  labelDate.textContent = format(now, "dd/MM/yyyy");
+};
+
 // creamos el campo username para todas las cuentas de usuarios
 // usamos forEach para modificar el array original, en otro caso map
 const createUsernames = function (accounts) {
@@ -139,27 +162,23 @@ const createUsernames = function (accounts) {
 };
 createUsernames(accounts);
 
-// CAMBIO: Función displayMovements actualizada para trabajar con objetos
+// Función displayMovements actualizada para trabajar con objetos
 const displayMovements = function (movements, sort = false) {
   // Vaciamos el HTML
   containerMovements.innerHTML = "";
-  
-  // CAMBIO: Implementación de ordenación por fecha
+
+  // Implementación de ordenación por fecha
   const movs = sort 
     ? [...movements].sort((a, b) => new Date(a.date) - new Date(b.date)) 
     : movements;
   
   // Recorremos el array de movimientos
   movs.forEach((mov, i) => {
-    // CAMBIO: Accedemos a mov.amount en lugar de mov directamente
+    // Accedemos a mov.amount en lugar de mov directamente
     const type = mov.amount > 0 ? "deposit" : "withdrawal";
     
-    // CAMBIO: Formateo de la fecha del objeto
-    const date = new Date(mov.date);
-    const day = `${date.getDate()}`.padStart(2, '0');
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const year = date.getFullYear();
-    const displayDate = `${day}/${month}/${year}`;
+    // Formateo de la fecha de manera relativa
+    const dateDisplay = formatDate(new Date(mov.date));
     
     // Creamos el HTML
     const html = `
@@ -167,7 +186,7 @@ const displayMovements = function (movements, sort = false) {
         <div class="movements__type movements__type--${type}">${i + 1} ${
       type === "withdrawal" ? "withdrawal" : "deposit"
     }</div>
-        <div class="movements__date">${displayDate}</div>
+        <div class="movements__date">${dateDisplay}</div>
         <div class="movements__value">${mov.amount.toFixed(2)}€</div>
       </div>
     `;
@@ -176,24 +195,24 @@ const displayMovements = function (movements, sort = false) {
   });
 };
 
-// CAMBIO: Función displayBalance actualizada para trabajar con objetos
+// Función displayBalance actualizada para trabajar con objetos
 const displayBalance = function (movements) {
   // Calculamos la suma de ingresos y retiradas de efectivo
-  // CAMBIO: Accedemos a movement.amount
+  // Accedemos a movement.amount
   balance = movements.reduce((total, movement) => total + movement.amount, 0);
   // Actualizamos el DOM
   labelBalance.textContent = `${balance.toFixed(2)} €`;
 };
 
-// CAMBIO: Función displaySummary actualizada para trabajar con objetos
+// Función displaySummary actualizada para trabajar con objetos
 const displaySummary = function (movements) {
-  // CAMBIO: Filtramos y sumamos la propiedad amount
+  // Filtramos y sumamos la propiedad amount
   const sumIn = movements
     .filter((movement) => movement.amount > 0)
     .reduce((total, movement) => total + movement.amount, 0);
   labelSumIn.textContent = `${sumIn.toFixed(2)} €`;
   
-  // CAMBIO: Filtramos y sumamos la propiedad amount
+  // Filtramos y sumamos la propiedad amount
   const sumOut = movements
     .filter((movement) => movement.amount < 0)
     .reduce((total, movement) => total + movement.amount, 0);
@@ -238,7 +257,7 @@ const updateUI = function (account) {
   displaySummary(account.movements);
 };
 
-// CAMBIO: Función btnLoan actualizada para trabajar con objetos
+// Función btnLoan actualizada para trabajar con objetos
 btnLoan.addEventListener("click", function (e) {
   e.preventDefault();
   const amountValue = inputLoanAmount.value;
@@ -257,7 +276,7 @@ btnLoan.addEventListener("click", function (e) {
   }
 
   // Si pasa ambas validaciones, procesamos el préstamo
-  // CAMBIO: Creamos un objeto con amount y date en lugar de solo añadir un número
+  // Creamos un objeto con amount y date en lugar de solo añadir un número
   currentAccount.movements.push({
     amount: amount,
     date: new Date()
@@ -306,7 +325,7 @@ btnClose.addEventListener("click", function (e) {
   }
 });
 
-// CAMBIO: Función btnTransfer actualizada para trabajar con objetos
+// Función btnTransfer actualizada para trabajar con objetos
 btnTransfer.addEventListener("click", function (e) {
   e.preventDefault();
 
@@ -322,7 +341,7 @@ btnTransfer.addEventListener("click", function (e) {
   // Limpiar los campos de entrada
   inputTransferAmount.value = inputTransferTo.value = "";
 
-  // CAMBIO: Calcular el balance actual usando amount
+  // Calcular el balance actual usando amount
   const currentBalance = currentAccount.movements.reduce(
     (acc, mov) => acc + mov.amount, 0
   );
@@ -334,7 +353,7 @@ btnTransfer.addEventListener("click", function (e) {
     receiverAccount &&
     receiverAccount.username !== currentAccount.username
   ) {
-    // CAMBIO: Realizar la transferencia con objetos en lugar de valores simples
+    // Realizar la transferencia con objetos en lugar de valores simples
     currentAccount.movements.push({
       amount: -amount,
       date: new Date()
@@ -368,7 +387,7 @@ btnTransfer.addEventListener("click", function (e) {
   }
 });
 
-// CAMBIO: Implementación de la funcionalidad de ordenación
+// Implementación de la funcionalidad de ordenación
 btnSort.addEventListener('click', function(e) {
   e.preventDefault();
   displayMovements(currentAccount.movements, !sorted);
