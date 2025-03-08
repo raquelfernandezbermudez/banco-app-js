@@ -7,8 +7,10 @@ import { es } from 'date-fns/locale';
 //Variable global para almacenar la cuenta actual
 let currentAccount;
 let balance;
-// Variable para controlar el estado de ordenación
-let sorted = false;
+
+// Variable para controlar el estado de ordenación (ascendente o descendente)
+let sortDirection = 'desc'; // Inicialmente descendente (más reciente primero)
+let sorted = false; // Inicialmente no ordenado
 
 document.querySelector("#app").innerHTML = `
     <nav>
@@ -162,15 +164,23 @@ const createUsernames = function (accounts) {
 };
 createUsernames(accounts);
 
-// Función displayMovements actualizada para trabajar con objetos
-const displayMovements = function (movements, sort = false) {
+const displayMovements = function (movements, sort = false, direction = 'desc') {
   // Vaciamos el HTML
   containerMovements.innerHTML = "";
 
-  // Implementación de ordenación por fecha
-  const movs = sort 
-    ? [...movements].sort((a, b) => new Date(a.date) - new Date(b.date)) 
-    : movements;
+  // Copia de los movimientos
+  let movs = [...movements];
+  
+  // Si sort es true, aplicamos la ordenación según la dirección
+  if (sort) {
+    if (direction === 'desc') {
+      // Ordenar de más reciente a más antiguo (descendente)
+      movs.sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else {
+      // Ordenar de más antiguo a más reciente (ascendente)
+      movs.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
+  }
   
   // Recorremos el array de movimientos
   movs.forEach((mov, i) => {
@@ -390,6 +400,20 @@ btnTransfer.addEventListener("click", function (e) {
 // Implementación de la funcionalidad de ordenación
 btnSort.addEventListener('click', function(e) {
   e.preventDefault();
-  displayMovements(currentAccount.movements, !sorted);
-  sorted = !sorted;
+  
+  // Si no estaba ordenado, activar la ordenación
+  if (!sorted) {
+    sorted = true;
+    sortDirection = 'desc'; // Primera ordenación: más reciente primero
+  } 
+  // Si ya estaba ordenado, cambiar la dirección
+  else {
+    sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+  }
+  
+  // Actualizar el icono según la dirección
+  btnSort.innerHTML = sortDirection === 'desc' ? '&uparrow; SORT' : '&downarrow; SORT';
+  
+  // Mostrar movimientos ordenados con la dirección correspondiente
+  displayMovements(currentAccount.movements, sorted, sortDirection);
 });
